@@ -1,7 +1,11 @@
 import firebase_admin
-from firebase_admin import credentials, firestore
-from flask import Flask
+from firebase_admin import credentials, firestore, auth
+from flask import Flask, render_template, request, redirect, url_for, session
+import requests #for verify passwords
+import json
 
+#configuration
+FIREBASE_WEB_API_KEY = "AIzaSyA2tfxr1I8xmxnxsDTXhWCOaMcPZif4aiQ"
 # setup firebase connection
 # use try-except block to catch errors if the key file is missing or invalid.
 
@@ -9,43 +13,80 @@ try:
     cred = credentials.Certificate("serviceAccountKey.json")
     firebase_admin.initialize_app(cred)
     db = firestore.client()
-    print("Firebase connected Successfully!")
-except Exception as e:
-    print(f"Error connecting to Firebase: {e}")
-    print("Make sure 'serviceAccountKey.json' is in the same folder as app.py")
+except Exception:
+   pass #initialized
 
 app = Flask(__name__)
+app.secret_key = "secret_math_key"
 
 # home page route
 @app.route('/')
 def home():
-    return """
-    <h1>Math Peer Support System (Firebase)</h1>
-    <p>System Status: Online</p>
-    <a href='/test-connection'>Click here to Test Database Write</a>
-    """
+    if 'user_id' in session:
+        return f"<h1>Welcome, {session['email']}!</h1><a href='/logout'</a>"
+    return redirect('/login')
 
-# test route
-# this simulates a student signing up to see if the db works
-@app.route('/test-connection')
-def test_db():
-    try:
-        #create a reference to a new document in the 'users' collection
-        #we will use 'leader_id' as the document name
-        doc_ref = db.collection('users').document('leader_id')
+# login route
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+     if request.method == 'POST':
+          email = request.form['email']
+          password = request.form['password']
 
-        #write data to it
-        doc_ref.set({
-            'username': 'Chong',
-            'role': 'Programming Leader',
-            'email': 'chongyouwei0521@gmail.com',
-            'system_status': 'Active'
-        })
+          request_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
+          payload = {"email": email, "password": password, "returnSecureToken": True}
 
-        return "SUCCESS! Data written to Firebase. Check your Firestore console"
-    except Exception as e:
-        return f"FAILED : {e}"
-    
+          result = requests.post(request_url, json=payload)
+          data = result.json()
+
+          if 'error' in data:
+               return render_template('login.html', error="Invalid Email or Password")
+          else:
+               # save user session if login
+               session['user_id'] = data['localId']
+               session['email'] = data['email']
+               return redirect('/')
+          
+     return render_template('login.html')
+     
+# register route
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+     if request.method == 'POST':
+          email = request.form['email']
+          password = request.form['password']
+
+          try:
+               # create user in firebase auth
+               user = auth.create_user(email=email, password=password)
+
+               # create user profile in firestore
+               db.collection('users').document(user.uid).set({
+                    'email': email,
+                    'role' : 'student',
+                    'created_at': firestore.SERVER_TIMESTAMP
+               })
+
+               return "<h1>Account Created! <a href='/login'>Go to Login</a></h1>"
+          except Exception as e:
+               return f"Error: {e}"
+          
+     return """
+          <form method='POST'>
+               <h2>Register</h2>
+               <input type="email" name="email" placeholder="Email" required><br>
+               <input type="password" name="password" placeholder="Password" required><br>
+               <button type="submit">Sign Up</button>
+          </form>
+
+     """
+
+# logout route
+@app.route('/logout')
+def logout():
+     session.clear()
+     return redirect('/login')   
+
 if __name__ == '__main__':
         app.run(debug=True, port=8000)
 
