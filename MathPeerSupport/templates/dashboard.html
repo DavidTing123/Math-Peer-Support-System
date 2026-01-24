@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MathPeerSupport</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        /* COLOR PALETTE */
+        :root {
+            --primary-dark: #0f2537; /* Midnight Navy */
+            --primary-light: #2c3e50; /* Slate Blue/Grey */
+            --accent-color: #ffc107; /* Warm Gold */
+        }
+
+        body {
+            background-color: #f0f2f5;
+            background-image: linear-gradient(315deg, #f0f2f5 0%, #d9e4f5 74%);
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        .bg-custom-dark {
+            background-color: var(--primary-dark) !important;
+        }
+
+        /* Card Headers */
+        .card-header-custom {
+            background-color: var(--primary-light) !important;
+            color: white;
+        }
+
+        /* TAB BUTTON STYLING */
+        .nav-pills .nav-link.active {
+            background-color: var(--primary-light) !important;
+            color: white !important;
+            font-weight: 600;
+        }
+        .nav-pills .nav-link {
+            color: var(--primary-light);
+            background-color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+            margin-right: 10px;
+        }
+        .nav-pills .nav-link:hover {
+            background-color: rgba(44, 62, 80, 0.1);
+        }
+
+        /* Custom Ask Button */
+        .btn-custom-ask {
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .btn-custom-ask:hover {
+            background-color: #d35400;
+            color: white;
+        }
+
+        .zoomable-img {
+            cursor: zoom-in;
+            transition: transform 0.2s;
+        }
+        .zoomable-img:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .title-link {
+            text-decoration: none;
+            color: #1a4a7c;
+            font-weight: 700;
+        }
+        .title-link:hover {
+            text-decoration: underline;
+            color: #0f2537;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-custom-dark mb-4 shadow">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="bi bi-calculator me-2"></i>MathPeerSupport
+            </a>
+            <div class="d-flex align-items-center text-white">
+                
+                {% if session.get('role') == 'admin' %}
+                    <a href="/admin" class="btn btn-danger btn-sm me-3 fw-bold shadow-sm">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Admin Panel
+                    </a>
+                {% endif %}
+
+                <span class="me-3 d-none d-sm-inline opacity-75">Hello, {{ user }}</span>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            
+            <div class="col-md-8">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="text-dark fw-bold" style="color: var(--primary-dark) !important;">
+                        <i class="bi bi-chat-left-text"></i> Community Feed
+                    </h2>
+                    
+                    <a href="/ask" class="btn btn-custom-ask shadow-sm px-4">
+                        <i class="bi bi-plus-lg me-1"></i> Ask Question
+                    </a>
+                </div>
+
+                <ul class="nav nav-pills mb-3" id="myTab" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button">Recent Questions</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="mine-tab" data-bs-toggle="tab" data-bs-target="#mine" type="button">My Questions</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    
+                    <div class="tab-pane fade show active" id="all">
+                        {% for q in questions %}
+                            <div class="card mb-3 shadow-sm border-0">
+                                <div class="card-body">
+                                    
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            {% if q.student_id == current_user_id %}
+                                                <div class="badge bg-custom-dark mb-2">My Question</div>
+                                            {% endif %}
+                                            
+                                            <h5 class="card-title">
+                                                <a href="/question/{{ q.id }}" class="title-link">{{ q.title }}</a>
+                                            </h5>
+                                            
+                                            <h6 class="card-subtitle mb-2 text-muted small">Asked by {{ q.student_email }}</h6>
+                                        </div>
+
+                                        {% if q.student_id == current_user_id or session.get('role') == 'admin' %}
+                                            <div class="btn-group">
+                                                <a href="/edit/{{ q.id }}" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <a href="/delete/{{ q.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this question?');">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <p class="card-text mt-3 text-secondary" style="white-space: pre-wrap;">{{ q.details }}</p>
+                                    
+                                    {% if q.image_url %}
+                                        <img src="{{ q.image_url }}" class="img-fluid rounded border mt-2 zoomable-img" style="max-height: 300px;" onclick="openZoom('{{ q.image_url }}')">
+                                    {% endif %}
+
+                                    <div class="mt-3">
+                                        <a href="/question/{{ q.id }}" class="btn btn-outline-dark btn-sm" style="color: var(--primary-dark); border-color: var(--primary-dark);">
+                                            <i class="bi bi-chat-dots"></i> View Answers & Reply
+                                        </a>
+                                    </div>
+
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-light shadow-sm text-center py-4">
+                                <p class="mb-0 text-muted">No questions yet! Be the first to ask.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="tab-pane fade" id="mine">
+                        {% for q in questions %}
+                            {% if q.student_id == current_user_id %}
+                                <div class="card mb-3 shadow-sm border-0">
+                                    <div class="card-body">
+                                        
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            
+                                            <h5 class="card-title">
+                                                <a href="/question/{{ q.id }}" class="title-link">{{ q.title }}</a>
+                                            </h5>
+                                            
+                                            <div class="btn-group">
+                                                <a href="/edit/{{ q.id }}" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <a href="/delete/{{ q.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this question?');">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        <p class="card-text mt-3" style="white-space: pre-wrap;">{{ q.details }}</p>
+                                        {% if q.image_url %}
+                                            <img src="{{ q.image_url }}" class="img-fluid rounded border mt-2 zoomable-img" style="max-height: 200px;" onclick="openZoom('{{ q.image_url }}')">
+                                        {% endif %}
+
+                                        <div class="mt-3">
+                                            <a href="/question/{{ q.id }}" class="btn btn-outline-dark btn-sm">
+                                                <i class="bi bi-chat-dots"></i> View Answers
+                                            </a>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="card p-4 text-center text-muted border-0 shadow-sm">
+                                <p class="mb-0">You haven't asked anything yet.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                
+                <div class="d-grid mb-4">
+                    <a href="/resources" class="btn btn-lg shadow text-start p-3 d-flex align-items-center justify-content-between text-white" style="background-color: var(--primary-light);">
+                        <div>
+                            <i class="bi bi-folder-fill me-2 text-warning fs-4"></i> 
+                            <span class="fw-bold">Course Resources</span>
+                            <div class="small fw-normal opacity-75 ms-1">Notes, Practices & Slides</div>
+                        </div>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </div>
+
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header card-header-custom fw-bold">
+                        <i class="bi bi-lightbulb"></i> Helpful External Links
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><a href="https://www.khanacademy.org/math" target="_blank" class="text-decoration-none text-dark">Khan Academy</a></li>
+                        <li class="list-group-item"><a href="https://www.wolframalpha.com/" target="_blank" class="text-decoration-none text-dark">Wolfram Alpha</a></li>
+                        <li class="list-group-item"><a href="https://www.desmos.com/calculator" target="_blank" class="text-decoration-none text-dark">Desmos Calculator</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Image Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center bg-dark">
+                    <img id="fullImage" src="" class="img-fluid" style="max-height: 80vh;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function openZoom(imageUrl) {
+            document.getElementById('fullImage').src = imageUrl;
+            var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
+            myModal.show();
+        }
+    </script>
+</body>
+</html>
