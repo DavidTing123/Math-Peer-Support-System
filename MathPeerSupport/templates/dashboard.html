@@ -87,7 +87,27 @@
                 <i class="bi bi-calculator me-2"></i>MathPeerSupport
             </a>
             <div class="d-flex align-items-center text-white">
-                <span class="me-3 d-none d-sm-inline opacity-75">Hello, {{ user }}</span>
+                
+                {% if session.get('role') == 'admin' %}
+                    <a href="/admin" class="btn btn-danger btn-sm me-3 fw-bold shadow-sm">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Admin Panel
+                    </a>
+                {% endif %}
+
+                <span class="me-3 d-none d-sm-inline opacity-75">
+                    Hello, {{ user }}
+                    
+                    {% if user_score >= 5 %}
+                        <span class="badge bg-warning text-dark ms-2 border border-warning" title="Top Contributor">
+                            <i class="bi bi-star-fill"></i> Star Peer
+                        </span>
+                    {% elif user_score >= 3 %}
+                        <span class="badge bg-secondary ms-2" title="Community Score">
+                            Score: {{ user_score }}
+                        </span>
+                    {% endif %}
+                    </span>
+
                 <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
             </div>
         </div>
@@ -137,7 +157,7 @@
                                             <h6 class="card-subtitle mb-2 text-muted small">Asked by {{ q.student_email }}</h6>
                                         </div>
 
-                                        {% if q.student_id == current_user_id %}
+                                        {% if q.student_id == current_user_id or session.get('role') == 'admin' %}
                                             <div class="btn-group">
                                                 <a href="/edit/{{ q.id }}" class="btn btn-sm btn-outline-secondary">
                                                     <i class="bi bi-pencil"></i>
