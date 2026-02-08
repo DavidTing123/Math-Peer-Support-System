@@ -94,7 +94,20 @@
                     </a>
                 {% endif %}
 
-                <span class="me-3 d-none d-sm-inline opacity-75">Hello, {{ user }}</span>
+                <span class="me-3 d-none d-sm-inline opacity-75">
+                    Hello, {{ user }}
+                    
+                    {% if user_score >= 5 %}
+                        <span class="badge bg-warning text-dark ms-2 border border-warning" title="Top Contributor">
+                            <i class="bi bi-star-fill"></i> Star Peer
+                        </span>
+                    {% elif user_score >= 3 %}
+                        <span class="badge bg-secondary ms-2" title="Community Score">
+                            Score: {{ user_score }}
+                        </span>
+                    {% endif %}
+                    </span>
+
                 <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
             </div>
         </div>

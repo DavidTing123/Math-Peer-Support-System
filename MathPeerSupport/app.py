@@ -27,6 +27,13 @@ app.secret_key = "secret_math_key"
 def home():
     if 'user_id' not in session:
         return redirect('/login')
+    
+    user_answers = db.collection_group('answers').where('student_id', '==', session['user_id']).stream()
+
+    total_score = 0
+    for doc in user_answers:
+         ans = doc.to_dict()
+         total_score += ans.get('score',0)
 
     questions_ref = db.collection('questions').order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
 
@@ -40,7 +47,9 @@ def home():
          'dashboard.html', 
          questions=all_questions, 
          user=session['email'],
-         current_user_id=session['user_id'])
+         current_user_id=session['user_id'],
+         user_score = total_score
+         )
 
 
 # login route
@@ -345,12 +354,26 @@ def verify_answer(question_id, answer_id):
      if 'user_id' not in session:
           return redirect('/login')
      
-     if session.get('role') != 'lecturer':
+     question_ref = db.collection('questions').document(question_id)
+     question_doc = question_ref.get()
+     
+     if not question_doc.exists:
+          return "Question not found", 404
+     
+     q_data = question_doc.to_dict()
+
+     is_lecturer = session.get('role') == 'lecturer'
+     is_author = q_data.get('student_id') == session['user_id']
+     
+     if not (is_lecturer or is_author):
           return "Unauthorized", 403
      
+     verify_type = 'official' if is_lecturer else 'accepted'
+
      ans_ref = db.collection('questions').document(question_id).collection('answers').document(answer_id)
      ans_ref.update({
           'is_verified': True,
+          'verified_type' : verify_type,
           'verified_by': session['email']
      })
 
@@ -392,11 +415,6 @@ def view_resource(resource_id):
 
 @app.route('/upload-resource', methods=['GET', 'POST'])
 def upload_resource():
-     if 'user_id' not in session:
-          return redirect ('/login')
-     
-     if session.get('role') != 'lecturer':
-          return "Unauthorized", 403
      
      if request.method == 'POST':
           title = request.form['title']
@@ -417,16 +435,18 @@ def upload_resource():
                file_url = blob.public_url
                file_type = file.content_type
           
-          db.collection('resources').add({
+          resource_data = {
                'title': title,
                'category': category,
                'content': content,
                'file_url': file_url,
                'file_type': file_type,
-               'lecturer_email': session['email'],
+               'uploader_email': session['email'],
+               'uploader_role': session.get('role', 'student'),
                'timestamp': firestore.SERVER_TIMESTAMP
-          })
+          }
           
+          db.collection('resources').add(resource_data)
           return redirect('/resources')
      
      return render_template('upload_resource.html')
@@ -479,15 +499,26 @@ def unverify_answer(question_id, answer_id):
      if 'user_id' not in session:
           return redirect('/login')
      
-     # SECURITY: Only Lecturers
-     if session.get('role') != 'lecturer':
-          return "Unauthorized", 403
+     question_ref = db.collection('questions').document(question_id)
+     q_doc = question_ref.get()
 
-     ans_ref = db.collection('questions').document(question_id).collection('answers').document(answer_id)
-     ans_ref.update({
-          'is_verified': False,
-          'verified_by': firestore.DELETE_FIELD
-     })
+     if not q_doc.exists:
+          return "Question not found", 404
+     
+     q_data = q_doc.to_dict()
+
+     is_lecturer = session.get('role') == 'lecturer'
+     is_author = q_data.get('student_id') == session['user_id']
+     
+     if is_lecturer or is_author:
+          ans_ref = db.collection('questions').document(question_id).collection('answers').document(answer_id)
+          ans_ref.update({
+               'is_verified': False,
+               'verified_type': firestore.DELETE_FIELD,
+               'verified_by': firestore.DELETE_FIELD
+          })
+     else:
+          return "Unauthorized", 403
 
      return redirect(f'/question/{question_id}')
 
@@ -501,10 +532,11 @@ def delete_resource(resource_id):
 
      if res_doc.exists:
           data = res_doc.to_dict()
-          # SECURITY: Only allow the UPLOADER to delete
-          if data.get('lecturer_email') == session['email'] or session.get('role') == 'admin':
+          is_owner = data.get('uploader_email') == session['email']
+          is_admin = session.get('role') == 'admin'
+
+          if is_owner or is_admin:
                res_ref.delete()
-               # Note: Ideally you should also delete the file from Storage bucket here
      
      return redirect('/resources')
 
@@ -521,8 +553,10 @@ def edit_resource(resource_id):
      
      data = res_doc.to_dict()
 
-     # SECURITY: Only allow the UPLOADER to edit
-     if data.get('lecturer_email') != session['email'] and session.get('role') != 'admin':
+     is_owner = data.get('uploader_email') == session['email']
+     is_admin = session.get('role') == 'admin'
+
+     if not is_owner and not is_admin:
           return "Unauthorized", 403
 
      if request.method == 'POST':

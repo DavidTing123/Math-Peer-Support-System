@@ -74,99 +74,113 @@
         <hr class="mb-4">
 
         {% for ans in answers %}
-        {% set is_top = (ans.id == best_answer_id) %}
-        {% set is_lecturer_answer = (ans.role == 'lecturer') %}
-        {% set is_verified = ans.is_verified %}
-        {% set is_my_answer = (ans.student_id == current_user_id) %}
-
-        <div class="card mb-3 shadow-sm 
-            {% if is_top %}border-warning border-2
-            {% elif is_lecturer_answer %}border-primary border-2
-            {% elif is_verified %}border-success border-2
-            {% else %}border-0{% endif %}">
+            {% set is_top = (ans.id == best_answer_id) %}
+            {% set is_lecturer_answer = (ans.role == 'lecturer') %}
+            {% set is_verified = ans.is_verified %}
+            {% set is_my_answer = (ans.student_id == current_user_id) %}
             
-            {% if is_top %}
-                <div class="card-header bg-warning text-dark fw-bold"><i class="bi bi-trophy-fill me-2"></i>Top Rated Answer</div>
-            {% elif is_lecturer_answer %}
-                <div class="card-header bg-primary text-white fw-bold"><i class="bi bi-patch-check-fill me-2"></i>Official Lecturer Answer</div>
-            {% elif is_verified %}
-                <div class="card-header bg-success text-white fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Verified Correct</div>
-            {% endif %}
+            {% set is_official_verify = (ans.verified_type == 'official') %}
+            {% set is_student_verify = (ans.verified_type == 'accepted') %}
 
-            <div class="card-body d-flex p-4">
+            <div class="card mb-3 shadow-sm 
+                {% if is_official_verify %}border-success border-2
+                {% elif is_student_verify %}border-warning border-2
+                {% elif is_top %}border-info border-2
+                {% else %}border-0{% endif %}">
                 
-                <div class="d-flex flex-column align-items-center me-4" style="min-width: 50px;">
-                    <a href="/vote/{{ question.id }}/{{ ans.id }}/up" class="vote-btn mb-1" title="Upvote"><i class="bi bi-caret-up-fill"></i></a>
-                    <span class="small fw-bold text-success">{{ ans.upvoters|length }}</span>
-                    <div class="my-1 border-top w-75"></div>
-                    <span class="small fw-bold text-danger">{{ ans.downvoters|length }}</span>
-                    <a href="/vote/{{ question.id }}/{{ ans.id }}/down" class="vote-btn mt-1" title="Downvote"><i class="bi bi-caret-down-fill"></i></a>
-                </div>
-
-                <div class="flex-grow-1 border-start ps-4">
-                    
-                    {% if is_my_answer %}
-                    <div class="float-end">
-                        <div class="dropdown">
-                            <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                                <li>
-                                    <a class="dropdown-item" href="/edit-answer/{{ question.id }}/{{ ans.id }}">
-                                        <i class="bi bi-pencil me-2"></i>Edit Answer
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item text-danger" href="/delete-answer/{{ question.id }}/{{ ans.id }}" onclick="return confirm('Delete this answer?');">
-                                        <i class="bi bi-trash me-2"></i>Delete Answer
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
+                {% if is_official_verify %}
+                    <div class="card-header bg-success text-white fw-bold">
+                        <i class="bi bi-patch-check-fill me-2"></i>Official Verified Answer
                     </div>
-                    {% endif %}
+                {% elif is_student_verify %}
+                    <div class="card-header bg-warning text-dark fw-bold">
+                        <i class="bi bi-check-circle-fill me-2"></i>Author Accepted Answer
+                    </div>
+                {% elif is_top %}
+                    <div class="card-header bg-info text-dark fw-bold">
+                        <i class="bi bi-trophy-fill me-2"></i>Top Rated Answer
+                    </div>
+                {% endif %}
 
-                    <p class="mb-2" style="white-space: pre-wrap;">{{ ans.answer_text }}</p>
+                <div class="card-body d-flex p-4">
                     
-                    {% if ans.image_url %}
-                        <div class="mt-3 mb-3">
-                            <img src="{{ ans.image_url }}" class="img-fluid rounded border zoomable-img" style="max-height: 300px;" onclick="openZoom('{{ ans.image_url }}')">
-                        </div>
-                    {% endif %}
+                    <div class="d-flex flex-column align-items-center me-4" style="min-width: 50px;">
+                        <a href="/vote/{{ question.id }}/{{ ans.id }}/up" class="vote-btn mb-1" title="Upvote"><i class="bi bi-caret-up-fill"></i></a>
+                        <span class="small fw-bold text-success">{{ ans.upvoters|length }}</span>
+                        <div class="my-1 border-top w-75"></div>
+                        <span class="small fw-bold text-danger">{{ ans.downvoters|length }}</span>
+                        <a href="/vote/{{ question.id }}/{{ ans.id }}/down" class="vote-btn mt-1" title="Downvote"><i class="bi bi-caret-down-fill"></i></a>
+                    </div>
 
-                    <div class="d-flex justify-content-between align-items-end mt-3">
-                        <div>
-                            {% if is_top %}
-                                <span class="badge bg-warning text-dark me-1"><i class="bi bi-star-fill"></i> Most Helpful</span>
-                            {% endif %}
+                    <div class="flex-grow-1 border-start ps-4">
+                        
+                        {% if is_my_answer or session.get('role') == 'admin' %}
+                        <div class="float-end">
+                            <div class="dropdown">
+                                <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                    <li>
+                                        <a class="dropdown-item" href="/edit-answer/{{ question.id }}/{{ ans.id }}">
+                                            <i class="bi bi-pencil me-2"></i>Edit Answer
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="/delete-answer/{{ question.id }}/{{ ans.id }}" onclick="return confirm('Delete this answer?');">
+                                            <i class="bi bi-trash me-2"></i>Delete Answer
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <p class="mb-2" style="white-space: pre-wrap;">{{ ans.answer_text }}</p>
+                        
+                        {% if ans.image_url %}
+                            <div class="mt-3 mb-3">
+                                <img src="{{ ans.image_url }}" class="img-fluid rounded border zoomable-img" style="max-height: 300px;" onclick="openZoom('{{ ans.image_url }}')">
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between align-items-end mt-3">
                             
-                            {% if current_user_role == 'lecturer' %}
-                                {% if not is_verified and not is_lecturer_answer %}
-                                    <a href="/verify-answer/{{ question.id }}/{{ ans.id }}" class="btn btn-sm btn-outline-success">
-                                        <i class="bi bi-check-lg"></i> Verify this Answer
-                                    </a>
-                                {% elif is_verified %}
-                                    <a href="/unverify-answer/{{ question.id }}/{{ ans.id }}" class="btn btn-sm btn-outline-danger" title="Unmark as verified">
-                                        <i class="bi bi-x-circle"></i> Unverify
-                                    </a>
+                            <div>
+                                {% set user_is_lecturer = (current_user_role == 'lecturer') %}
+                                {% set user_is_author = (question.student_id == current_user_id) %}
+
+                                {% if not is_verified %}
+                                    {% if user_is_lecturer or user_is_author %}
+                                        <a href="/verify-answer/{{ question.id }}/{{ ans.id }}" 
+                                           class="btn btn-sm {% if user_is_lecturer %}btn-outline-success{% else %}btn-outline-warning{% endif %}">
+                                            <i class="bi bi-check-lg"></i> 
+                                            {% if user_is_lecturer %}Verify (Official){% else %}Mark as Accepted{% endif %}
+                                        </a>
+                                    {% endif %}
+                                
+                                {% else %}
+                                    {% if user_is_lecturer or user_is_author %}
+                                        <a href="/unverify-answer/{{ question.id }}/{{ ans.id }}" class="btn btn-sm btn-outline-danger" title="Unmark as verified">
+                                            <i class="bi bi-x-circle"></i> Unverify
+                                        </a>
+                                    {% endif %}
+
+                                    <span class="text-muted small ms-2">
+                                        <i class="bi bi-check-all"></i> Verified by {{ ans.verified_by }}
+                                    </span>
                                 {% endif %}
-                            {% endif %}
+                            </div>
 
-                            {% if is_verified and not is_lecturer_answer %}
-                                <span class="text-success small fw-bold ms-2"><i class="bi bi-check-all"></i> Verified by Lecturer</span>
-                            {% endif %}
+                            <small class="text-muted fst-italic">
+                                Answered by <strong>{{ ans.student_email }}</strong>
+                                {% if is_lecturer_answer %} <span class="badge bg-primary ms-1">Lecturer</span> {% endif %}
+                            </small>
                         </div>
-
-                        <small class="text-muted fst-italic">
-                            Answered by <strong>{{ ans.student_email }}</strong>
-                            {% if is_lecturer_answer %} <span class="badge bg-primary ms-1">Lecturer</span> {% endif %}
-                        </small>
                     </div>
                 </div>
             </div>
-        </div>
         {% else %}
             <div class="alert alert-light text-center shadow-sm py-4 border-0">
                 <p class="mb-0 text-muted">No answers yet. Be the first to help!</p>
