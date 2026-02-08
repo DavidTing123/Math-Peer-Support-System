@@ -61,11 +61,10 @@
                 <i class="bi bi-journal-bookmark-fill me-2"></i>Course Resources
             </h2>
             
-            {% if user_role == 'lecturer' %}
-                <a href="/upload-resource" class="btn btn-custom-upload shadow-sm px-4">
-                    <i class="bi bi-cloud-upload me-2"></i>Upload Material
-                </a>
-            {% endif %}
+            <a href="/upload-resource" class="btn btn-custom-upload shadow-sm px-4">
+                <i class="bi bi-cloud-upload me-2"></i>Share Resource
+            </a>
+
         </div>
 
         <div class="row">
@@ -77,16 +76,18 @@
                         <div class="icon-box me-3 text-white shadow-sm
                             {% if res.category == 'Announcement' %}bg-danger
                             {% elif res.category == 'Practice' %}bg-success
+                            {% elif res.category == 'Cheatsheet' %}bg-warning
                             {% else %}bg-custom-dark{% endif %}">
                             
                             {% if res.category == 'Announcement' %}<i class="bi bi-megaphone-fill"></i>
                             {% elif res.category == 'Practice' %}<i class="bi bi-pencil-square"></i>
+                            {% elif res.category == 'Cheatsheet' %}<i class="bi bi-journal-text"></i>
                             {% else %}<i class="bi bi-file-earmark-text-fill"></i>{% endif %}
                         </div>
 
                         <div class="flex-grow-1 position-relative">
                             
-                            {% if session['email'] == res.lecturer_email %}
+                            {% if session['email'] == res.uploader_email or session['role'] == 'admin' %}
                             <div class="dropdown position-absolute top-0 end-0">
                                 <button class="btn btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="z-index: 10; position: relative;">
                                     <i class="bi bi-three-dots-vertical"></i>
@@ -112,7 +113,17 @@
                                     {{ res.title }}
                                 </a>
                             </h5>
-                            <span class="badge bg-light text-secondary border mb-2">{{ res.category }}</span>
+                            
+                            <div class="mb-2">
+                                <span class="badge bg-light text-secondary border">{{ res.category }}</span>
+                                
+                                {% if res.uploader_role == 'lecturer' %}
+                                    <span class="badge bg-primary ms-1">Official</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark ms-1">Student</span>
+                                {% endif %}
+                            </div>
+
                             <p class="text-muted small mb-0 text-truncate" style="max-width: 300px;">
                                 {{ res.content }}
                             </p>
@@ -120,7 +131,7 @@
 
                     </div>
                     <div class="card-footer bg-white border-0 pt-0 pb-3 ps-4 rounded-bottom">
-                        <small class="text-muted fst-italic">Posted by {{ res.lecturer_email }}</small>
+                        <small class="text-muted fst-italic">Posted by {{ res.uploader_email }}</small>
                     </div>
                 </div>
             </div>
